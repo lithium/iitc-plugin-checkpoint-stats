@@ -2,7 +2,7 @@
 // @id             iitc-plugin-checkpoint-stats@nobody889
 // @name           IITC plugin: Show current/upcoming checkpoint stats
 // @category       Info
-// @version        0.1.0
+// @version        0.2.0
 // @namespace      https://github.com/lithium/iitc-plugin-checkpoint-stats
 // @updateURL      @@UPDATEURL@@
 // @downloadURL    @@DOWNLOADURL@@
@@ -44,14 +44,78 @@ window.plugin.checkpointStats.CYCLE = 7*25*60*60; //7 25 hour 'days' per cycle
 
 window.plugin.checkpointStats.setup  = function() {
 
+  var style = '<style type="text/css">'
+            + '.regionName { margin: 0; text-align: center; }'
+            + '.scorebarHeader { margin: 25px 0 0 0; font-size: 12px; color: white; }'
+            + '.scorebarHeader.nopad { margin: 3px 0 0 0; }'
+            + '.scorebar span { display: block; float: left; height: 21px; line-height: 22px;}'
+            + '.scorebar .res { background-color: rgb(0,86,132); text-align: left;}'
+            + '.scorebar .enl { background-color: rgb(1,127,1); text-align: right;}'
+            + '</style>';
+
+  $(style).appendTo("head");
+
   // add a div to the sidebar, and basic style
-  $('#sidebar').append('<div id="checkpoint_stats_display"></div>');
-  $('#checkpoint_stats_display').css({'color':'#ffce00'});
+  $('#sidebar').append('<div id="checkpoint_stats_previous"></div>');
+  $('#checkpoint_stats_previous').css({'color':'#ffce00'});
 
-
-  window.plugin.checkpointStats.update();
+  window.addHook('mapDataRefreshStart', window.plugin.checkpointStats.fetchRegionScoreboard);
 };
 
+
+window.plugin.checkpointStats.fetchRegionScoreboard = function() {
+  var latLng = map.getCenter();
+  var latE6 = Math.round(latLng.lat*1E6);
+  var lngE6 = Math.round(latLng.lng*1E6);
+
+  window.postAjax('getRegionScoreDetails', {latE6:latE6,lngE6:lngE6}, window.plugin.checkpointStats.regionScoreboardSuccess, window.plugin.checkpointStats.regionScoreboardFailure);
+}
+
+window.plugin.checkpointStats.regionScoreboardSuccess = function(result) {
+  var gameScore = {
+    enl: parseInt(result.result.gameScore[0]),
+    res: parseInt(result.result.gameScore[1])
+  };
+  var lastScore = {
+    checkpoint: parseInt(result.result.scoreHistory[0][0]),
+    enl: parseInt(result.result.scoreHistory[0][1]),
+    res: parseInt(result.result.scoreHistory[0][2])
+  }
+
+  var scorebar = function(enl, res, suffix) {
+    var enlPercent = (enl / (enl + res))*100;
+    var resPercent = 100 - enlPercent;
+    var suffix = suffix || '';
+
+    return '<div class="scorebar">'
+           + '<span class="enl" style="width: '+enlPercent+'%">'+window.plugin.checkpointStats.muFormat(enl)+suffix+'&nbsp;</span>'
+           + '<span class="res" style="width: '+resPercent+'%">&nbsp;'+window.plugin.checkpointStats.muFormat(res)+suffix+'</span>'
+           + '<span style="clear: both"></span>'
+         + '</div>';
+  }
+
+  var now = new Date().getTime();
+  var cycleStartInt = Math.floor(now / (window.plugin.checkpointStats.CYCLE*1000)) * (window.plugin.checkpointStats.CYCLE*1000);
+  var cycleEnd = new Date(cycleStartInt + window.plugin.checkpointStats.CYCLE*1000);
+  var checkpointStartInt = Math.floor(now / (window.plugin.checkpointStats.CHECKPOINT*1000)) * (window.plugin.checkpointStats.CHECKPOINT*1000);
+  var checkpointStart = new Date(checkpointStartInt)
+  var checkpointEnd = new Date(checkpointStartInt + window.plugin.checkpointStats.CHECKPOINT*1000);
+
+  var checkpointSince = window.plugin.checkpointStats.readableUntil(new Date(), checkpointStart)
+
+  var html = '<p class="regionName">'+result.result.regionName+'</p>'
+           + '<p class="scorebarHeader nopad">next checkpoint - '+window.plugin.checkpointStats.dateFormat(checkpointEnd)+' in '+window.plugin.checkpointStats.readableUntil(checkpointEnd)+'</p>'
+           + scorebar(gameScore.enl, gameScore.res)
+           + '<p class="scorebarHeader">checkpoint #'+lastScore.checkpoint+' - '+window.plugin.checkpointStats.dateFormat(checkpointStart)+' '+checkpointSince+' ago</p>'
+           + scorebar(lastScore.enl, lastScore.res, ' mu')
+           + '<p class="scorebarHeader">next cycle - '+window.plugin.checkpointStats.dateFormat(cycleEnd)+' in '+window.plugin.checkpointStats.readableUntil(cycleEnd)+'</p>'
+           ;
+
+  $('#checkpoint_stats_previous').html(html);
+ 
+}
+window.plugin.checkpointStats.regionScoreboardFailure = function(result) {
+}
 
 window.plugin.checkpointStats.dateFormat = function(date) {
   var monthNames = [
@@ -89,40 +153,15 @@ window.plugin.checkpointStats.readableUntil = function(date, whence) {
 
 }
 
-
-window.plugin.checkpointStats.update = function() {
-  // checkpoint and cycle start times are based on a simple modulus of the timestamp
-  // no special epoch (other than the unix timestamp/javascript's 1970-01-01 00:00 UTC) is required
-
-  // when regional scoreboards were introduced, the first cycle would have started at 2014-01-15 10:00 UTC - but it was
-  // a few checkpoints in when scores were first added
-
-  var now = new Date().getTime();
-
-  var cycleStart = Math.floor(now / (window.plugin.checkpointStats.CYCLE*1000)) * (window.plugin.checkpointStats.CYCLE*1000);
-  var cycleEnd = cycleStart + window.plugin.checkpointStats.CYCLE*1000;
-
-  var checkpointStart = Math.floor(now / (window.plugin.checkpointStats.CHECKPOINT*1000)) * (window.plugin.checkpointStats.CHECKPOINT*1000);
-  var checkpointEnd = checkpointStart + window.plugin.checkpointStats.CHECKPOINT*1000;
-
-
-  var formatRow = function(label,time) {
-    var d = new Date(time);
-    var timeStr = window.plugin.checkpointStats.dateFormat(d);
-    var remainStr = window.plugin.checkpointStats.readableUntil(d);
-
-    return '<tr><td>'+label+'</td><td>'+timeStr+'</td>'+'</td><td>'+remainStr+'</td></tr>';
-  };
-
-  var html = '<table>'
-           + formatRow('Checkpoint', checkpointEnd)
-           + formatRow('Cycle', cycleEnd)
-           + '</table>';
-
-  $('#checkpoint_stats_display').html(html);
-
-  setTimeout ( window.plugin.checkpointStats.update, checkpointEnd-now);
-};
+window.plugin.checkpointStats.muFormat = function(score) {
+  if (score > 1000000) {
+    return (score/1000000).toFixed(1)+'M'
+  }
+  else if (score > 1000) {
+    return (score/1000).toFixed(1)+'k'
+  }
+  return score
+}
 
 
 

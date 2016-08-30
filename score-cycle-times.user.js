@@ -2,7 +2,7 @@
 // @id             iitc-plugin-checkpoint-stats@nobody889
 // @name           IITC plugin: Show current/upcoming checkpoint stats
 // @category       Info
-// @version        0.1.1
+// @version        0.2.0
 // @namespace      https://github.com/lithium/iitc-plugin-checkpoint-stats
 // @updateURL      @@UPDATEURL@@
 // @downloadURL    @@DOWNLOADURL@@

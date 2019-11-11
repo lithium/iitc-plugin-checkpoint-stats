@@ -7,14 +7,14 @@
 // @updateURL      @@UPDATEURL@@
 // @downloadURL    @@DOWNLOADURL@@
 // @description    [@@BUIsLDNAME@@-@@BUILDDATE@@] Show the remaining time until the next checkpoint.
-// @include        https://www.ingress.com/intel*
-// @include        http://www.ingress.com/intel*
-// @match          https://www.ingress.com/intel*
-// @match          http://www.ingress.com/intel*
-// @include        https://www.ingress.com/mission/*
-// @include        http://www.ingress.com/mission/*
-// @match          https://www.ingress.com/mission/*
-// @match          http://www.ingress.com/mission/*
+// @include        https://*.ingress.com/intel*
+// @include        http://*.ingress.com/intel*
+// @match          https://*.ingress.com/intel*
+// @match          http://*.ingress.com/intel*
+// @include        https://*.ingress.com/mission/*
+// @include        http://*.ingress.com/mission/*
+// @match          https://*.ingress.com/mission/*
+// @match          http://*.ingress.com/mission/*
 // @grant          none
 // ==/UserScript==
 
@@ -43,10 +43,9 @@ window.plugin.checkpointStats.CYCLE = 7*25*60*60; //7 25 hour 'days' per cycle
 
 
 window.plugin.checkpointStats.setup  = function() {
-
   var style = '<style type="text/css">'
             + '.regionName { margin: 0; text-align: center; }'
-            + '.scorebarHeader { margin: 25px 0 0 0; font-size: 12px; color: white; }'
+            + '.scorebarHeader { margin: 20px 0 8px 4px; font-size: 12px; color: white; }'
             + '.scorebarHeader.nopad { margin: 3px 0 0 0; }'
             + '.scorebar span { display: block; float: left; height: 21px; line-height: 22px;}'
             + '.scorebar .res { background-color: rgb(0,86,132); text-align: left;}'
@@ -82,6 +81,15 @@ window.plugin.checkpointStats.regionScoreboardSuccess = function(result) {
     res: parseInt(result.result.scoreHistory[0][2])
   }
 
+  var totalScore = {
+    enl: 0,
+    res: 0,
+  }
+  result.result.scoreHistory.forEach(row => {
+    totalScore.enl += parseInt(row[1])
+    totalScore.res += parseInt(row[2])
+  })
+
   var scorebar = function(enl, res, suffix) {
     var enlPercent = (enl / (enl + res))*100;
     var resPercent = 100 - enlPercent;
@@ -104,11 +112,11 @@ window.plugin.checkpointStats.regionScoreboardSuccess = function(result) {
   var checkpointSince = window.plugin.checkpointStats.readableUntil(new Date(), checkpointStart)
 
   var html = '<p class="regionName">'+result.result.regionName+'</p>'
-           + '<p class="scorebarHeader nopad">next checkpoint - '+window.plugin.checkpointStats.dateFormat(checkpointEnd)+' in '+window.plugin.checkpointStats.readableUntil(checkpointEnd)+'</p>'
-           + scorebar(gameScore.enl, gameScore.res)
+           //+ '<p class="scorebarHeader nopad">next checkpoint - '+window.plugin.checkpointStats.dateFormat(checkpointEnd)+' in '+window.plugin.checkpointStats.readableUntil(checkpointEnd)+'</p>'
+           + scorebar(lastScore.enl, lastScore.res)
            + '<p class="scorebarHeader">checkpoint #'+lastScore.checkpoint+' - '+window.plugin.checkpointStats.dateFormat(checkpointStart)+' '+checkpointSince+' ago</p>'
-           + scorebar(lastScore.enl, lastScore.res, ' mu')
-           + '<p class="scorebarHeader">next cycle - '+window.plugin.checkpointStats.dateFormat(cycleEnd)+' in '+window.plugin.checkpointStats.readableUntil(cycleEnd)+'</p>'
+           + scorebar(totalScore.enl, totalScore.res)
+           + '<p class="scorebarHeader">cycle ends - '+window.plugin.checkpointStats.dateFormat(cycleEnd)+' in '+window.plugin.checkpointStats.readableUntil(cycleEnd)+'</p>'
            ;
 
   $('#checkpoint_stats_previous').html(html);

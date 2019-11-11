@@ -1,8 +1,8 @@
 // ==UserScript==
 // @id             iitc-plugin-checkpoint-stats@nobody889
-// @name           IITC plugin: Show current/upcoming checkpoint stats
+// @name           IITC plugin: Show checkpoint and total score in MU
 // @category       Info
-// @version        0.2.0
+// @version        0.3.0
 // @namespace      https://github.com/lithium/iitc-plugin-checkpoint-stats
 // @updateURL      @@UPDATEURL@@
 // @downloadURL    @@DOWNLOADURL@@

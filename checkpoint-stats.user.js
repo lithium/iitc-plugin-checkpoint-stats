@@ -2,7 +2,7 @@
 // @id             iitc-plugin-checkpoint-stats@nobody889
 // @name           IITC plugin: Show checkpoint and total score in MU
 // @category       Info
-// @version        0.3.0
+// @version        0.4.0
 // @namespace      https://github.com/lithium/iitc-plugin-checkpoint-stats
 // @updateURL      @@UPDATEURL@@
 // @downloadURL    @@DOWNLOADURL@@
@@ -75,20 +75,25 @@ window.plugin.checkpointStats.regionScoreboardSuccess = function(result) {
     enl: parseInt(result.result.gameScore[0]),
     res: parseInt(result.result.gameScore[1])
   };
-  var lastScore = {
-    checkpoint: parseInt(result.result.scoreHistory[0][0]),
-    enl: parseInt(result.result.scoreHistory[0][1]),
-    res: parseInt(result.result.scoreHistory[0][2])
-  }
-
+  var lastScore = null;
   var totalScore = {
     enl: 0,
     res: 0,
   }
-  result.result.scoreHistory.forEach(row => {
-    totalScore.enl += parseInt(row[1])
-    totalScore.res += parseInt(row[2])
-  })
+
+  if (result.result.scoreHistory.length > 0) {
+    lastScore = {
+      checkpoint: parseInt(result.result.scoreHistory[0][0]),
+      enl: parseInt(result.result.scoreHistory[0][1]),
+      res: parseInt(result.result.scoreHistory[0][2])
+    }
+
+    result.result.scoreHistory.forEach(row => {
+      totalScore.enl += parseInt(row[1])
+      totalScore.res += parseInt(row[2])
+    })
+  }
+
 
   var scorebar = function(enl, res, suffix) {
     var enlPercent = (enl / (enl + res))*100;
@@ -111,13 +116,18 @@ window.plugin.checkpointStats.regionScoreboardSuccess = function(result) {
 
   var checkpointSince = window.plugin.checkpointStats.readableUntil(new Date(), checkpointStart)
 
-  var html = '<p class="regionName">'+result.result.regionName+'</p>'
-           //+ '<p class="scorebarHeader nopad">next checkpoint - '+window.plugin.checkpointStats.dateFormat(checkpointEnd)+' in '+window.plugin.checkpointStats.readableUntil(checkpointEnd)+'</p>'
-           + scorebar(lastScore.enl, lastScore.res)
-           + '<p class="scorebarHeader">checkpoint #'+lastScore.checkpoint+' - '+window.plugin.checkpointStats.dateFormat(checkpointStart)+' '+checkpointSince+' ago</p>'
-           + scorebar(totalScore.enl, totalScore.res)
-           + '<p class="scorebarHeader">cycle ends - '+window.plugin.checkpointStats.dateFormat(cycleEnd)+' in '+window.plugin.checkpointStats.readableUntil(cycleEnd)+'</p>'
-           ;
+  var html = '<p class="regionName">'+result.result.regionName+'</p>';
+  if (lastScore != null) {
+    html += '<p class="scorebarHeader nopad">checkpoint #'+lastScore.checkpoint+' - '+window.plugin.checkpointStats.dateFormat(checkpointStart)+'</p>'
+            + scorebar(lastScore.enl, lastScore.res)
+  } else {
+    html += '<p class="scorebarHeader nopad"></p>';
+  }
+  html += '<p class="scorebarHeader nopad">next - '+window.plugin.checkpointStats.dateFormat(checkpointEnd)+' in '+window.plugin.checkpointStats.readableUntil(checkpointEnd)+'</p>';
+  if (totalScore.enl+totalScore.res > 0) {
+    html += scorebar(totalScore.enl, totalScore.res)
+  }
+  html += '<p class="scorebarHeader nopad">cycle ends - '+window.plugin.checkpointStats.dateFormat(cycleEnd)+' in '+window.plugin.checkpointStats.readableUntil(cycleEnd)+'</p>';
 
   $('#checkpoint_stats_previous').html(html);
  
